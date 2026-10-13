@@ -79,38 +79,58 @@ export default function TvDisplay({ socketHook }) {
     return () => clearInterval(interval);
   }, []);
 
-  const currentItem = state.playlist[state.currentIndex] || null;
+  const nextSlideRef = useRef(nextSlide);
+  useEffect(() => {
+    nextSlideRef.current = nextSlide;
+  });
+
+  const playlistLength = state.playlist.length;
+  const currentIndex = state.currentIndex;
+  const isPlaying = state.isPlaying;
+  const timerSeconds = state.timerSeconds || 5;
+  const currentItem = state.playlist[currentIndex] || null;
   const isVideo = currentItem?.type === 'video';
 
   // Slideshow auto-advance timer for images
   useEffect(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
     setProgress(0);
 
-    // If paused, or no items, or current item is a video (videos manage their own progress/end)
-    if (!state.isPlaying || !currentItem || isVideo || state.playlist.length <= 1) {
+    // If not playing, or less than 2 items, or is video, don't run image timer
+    if (!isPlaying || playlistLength <= 1 || isVideo) {
       return;
     }
 
-    const durationMs = (state.timerSeconds || 5) * 1000;
-    const intervalStepMs = 100;
-    let elapsedMs = 0;
+    const durationMs = timerSeconds * 1000;
+    const startTime = Date.now();
 
     timerIntervalRef.current = setInterval(() => {
-      elapsedMs += intervalStepMs;
-      const pct = Math.min(100, (elapsedMs / durationMs) * 100);
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / durationMs) * 100);
       setProgress(pct);
 
-      if (elapsedMs >= durationMs) {
-        clearInterval(timerIntervalRef.current);
-        nextSlide();
+      if (elapsed >= durationMs) {
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setProgress(0);
+        if (nextSlideRef.current) {
+          nextSlideRef.current();
+        }
       }
-    }, intervalStepMs);
+    }, 50);
 
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     };
-  }, [state.isPlaying, state.currentIndex, state.timerSeconds, currentItem, isVideo, state.playlist.length, nextSlide]);
+  }, [isPlaying, currentIndex, timerSeconds, playlistLength, isVideo]);
 
   // Handle Video Time Update & End
   const handleVideoTimeUpdate = () => {

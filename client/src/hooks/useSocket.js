@@ -382,69 +382,111 @@ export function useSocket() {
 
   // ACTIONS (Delivers via both P2P and Socket.IO)
   const updatePlaylist = useCallback((newPlaylist) => {
-    setState((prev) => ({ ...prev, playlist: newPlaylist }));
+    setState((prev) => {
+      const updated = {
+        ...prev,
+        playlist: newPlaylist,
+        currentIndex: Math.min(prev.currentIndex, Math.max(0, newPlaylist.length - 1))
+      };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
+    });
     sendToHostP2P({ type: 'update-playlist', playlist: newPlaylist });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('update-playlist', { playlist: newPlaylist });
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const setIndex = useCallback((index) => {
-    setState((prev) => ({ ...prev, currentIndex: index }));
+    setState((prev) => {
+      const updated = { ...prev, currentIndex: index };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
+    });
     sendToHostP2P({ type: 'set-index', index });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('set-index', { index });
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const nextSlide = useCallback(() => {
     setState((prev) => {
       if (prev.playlist.length === 0) return prev;
-      return { ...prev, currentIndex: (prev.currentIndex + 1) % prev.playlist.length };
+      const nextIdx = (prev.currentIndex + 1) % prev.playlist.length;
+      const updated = { ...prev, currentIndex: nextIdx };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
     });
     sendToHostP2P({ type: 'next-slide' });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('next-slide');
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const prevSlide = useCallback(() => {
     setState((prev) => {
       if (prev.playlist.length === 0) return prev;
-      return { ...prev, currentIndex: (prev.currentIndex - 1 + prev.playlist.length) % prev.playlist.length };
+      const prevIdx = (prev.currentIndex - 1 + prev.playlist.length) % prev.playlist.length;
+      const updated = { ...prev, currentIndex: prevIdx };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
     });
     sendToHostP2P({ type: 'prev-slide' });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('prev-slide');
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const togglePlay = useCallback((desiredState = null) => {
     setState((prev) => {
       const nextPlay = typeof desiredState === 'boolean' ? desiredState : !prev.isPlaying;
-      return { ...prev, isPlaying: nextPlay };
+      const updated = { ...prev, isPlaying: nextPlay };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
     });
     sendToHostP2P({ type: 'toggle-play', isPlaying: desiredState });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('toggle-play', { isPlaying: desiredState });
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const setTimer = useCallback((seconds) => {
-    setState((prev) => ({ ...prev, timerSeconds: seconds }));
+    setState((prev) => {
+      const updated = { ...prev, timerSeconds: seconds };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
+    });
     sendToHostP2P({ type: 'set-timer', seconds });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('set-timer', { seconds });
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const updateSettings = useCallback((settings) => {
-    setState((prev) => ({ ...prev, ...settings }));
+    setState((prev) => {
+      const updated = { ...prev, ...settings };
+      if (isHostTvRef.current) {
+        broadcastP2P({ type: 'sync-state', state: updated });
+      }
+      return updated;
+    });
     sendToHostP2P({ type: 'update-settings', settings });
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('update-settings', settings);
     }
-  }, [sendToHostP2P]);
+  }, [sendToHostP2P, broadcastP2P]);
 
   const reportVideoFinished = useCallback(() => {
     if (isHostTvRef.current) {

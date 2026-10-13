@@ -89,6 +89,7 @@ export default function App() {
           roomId={currentRoomId || roomData?.roomId}
           onOpenScanner={() => setIsScannerOpen(true)}
           onSwitchMode={() => handleSwitchMode('tv')}
+          onJoinRoom={handleJoinSpecificRoom}
         />
       )}
 
