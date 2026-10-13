@@ -66,27 +66,61 @@ export default function MobileRemote({
     files.forEach((file) => formData.append('files', file));
 
     try {
-      // Connect to upload API
+      let mediaItems = [];
+
+      // Try backend upload API if URL is configured or on local development
       const isViteDev = window.location.port === '5173';
       const baseUrl = import.meta.env.VITE_BACKEND_URL || (isViteDev 
         ? `${window.location.protocol}//${window.location.hostname}:3001`
         : '');
-      const apiUrl = `${baseUrl}/api/upload`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      if (baseUrl) {
+        try {
+          const response = await fetch(`${baseUrl}/api/upload`, {
+            method: 'POST',
+            body: formData,
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.items) {
+              mediaItems = data.items;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('API backend indisponível, processando no navegador:', apiErr);
+        }
+      }
 
-      const data = await response.json();
-      if (data.success && data.items) {
-        // Append new items to playlist
-        const updated = [...state.playlist, ...data.items];
+      // If backend was unavailable (e.g. on Cloudflare Pages static hosting),
+      // read files directly in the browser as Data URLs (works 100% serverless!)
+      if (mediaItems.length === 0) {
+        const filePromises = files.map((file) => {
+          return new Promise((resolve) => {
+            const isVid = (file.type || '').startsWith('video/');
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              resolve({
+                id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+                type: isVid ? 'video' : 'image',
+                name: file.name,
+                url: event.target.result,
+                duration: isVid ? 0 : 5
+              });
+            };
+            reader.readAsDataURL(file);
+          });
+        });
+
+        mediaItems = await Promise.all(filePromises);
+      }
+
+      if (mediaItems.length > 0) {
+        const updated = [...state.playlist, ...mediaItems];
         updatePlaylist(updated);
       }
     } catch (err) {
-      console.error('Falha no envio de arquivos:', err);
-      alert('Erro ao enviar mídias. Verifique a conexão com o servidor.');
+      console.error('Falha ao processar mídias:', err);
+      alert('Erro ao carregar mídia. Tente novamente.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

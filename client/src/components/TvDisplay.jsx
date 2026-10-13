@@ -15,6 +15,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import LiquidGlassCard from './LiquidGlassCard';
+import QRCode from 'qrcode';
 
 export default function TvDisplay({ socketHook }) {
   const { 
@@ -31,6 +32,8 @@ export default function TvDisplay({ socketHook }) {
   const [showHud, setShowHud] = useState(true);
   const [progress, setProgress] = useState(0); // 0 to 100%
   const [currentTimeStr, setCurrentTimeStr] = useState('');
+  const [localQr, setLocalQr] = useState('');
+  const [localRoomId, setLocalRoomId] = useState('');
   
   const videoRef = useRef(null);
   const hudTimeoutRef = useRef(null);
@@ -42,6 +45,26 @@ export default function TvDisplay({ socketHook }) {
       createRoom();
     }
   }, [roomData, createRoom]);
+
+  // Instant client-side QR Code generation guarantee
+  useEffect(() => {
+    const activeId = (roomData?.roomId || localRoomId || 'ASPR').toUpperCase();
+    if (!localRoomId) setLocalRoomId(activeId);
+
+    if (!roomData?.qrDataUrl && !localQr) {
+      const targetUrl = `${window.location.origin}/?room=${activeId}&role=remote`;
+      QRCode.toDataURL(targetUrl, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 400,
+        color: { dark: '#000000', light: '#ffffff' }
+      }).then((url) => {
+        setLocalQr(url);
+      }).catch((err) => {
+        console.error('Erro ao gerar QR Code local:', err);
+      });
+    }
+  }, [roomData, localQr, localRoomId]);
 
   // Live digital clock
   useEffect(() => {
@@ -182,9 +205,9 @@ export default function TvDisplay({ socketHook }) {
               <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-blue-500/20 via-slate-400/20 to-purple-500/20 blur-xl opacity-75 animate-pulse-slow pointer-events-none" />
               
               <div className="relative bg-white p-4 rounded-2xl shadow-2xl border border-white/20">
-                {roomData?.qrDataUrl ? (
+                {(roomData?.qrDataUrl || localQr) ? (
                   <img 
-                    src={roomData.qrDataUrl} 
+                    src={roomData?.qrDataUrl || localQr} 
                     alt="Conectar via QR Code" 
                     className="w-64 h-64 md:w-72 md:h-72 object-contain" 
                   />
@@ -200,7 +223,7 @@ export default function TvDisplay({ socketHook }) {
             <div className="mb-4 text-center">
               <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Código da Sala</span>
               <div className="text-4xl md:text-5xl font-extrabold tracking-widest bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent mt-1">
-                {roomData?.roomId || '----'}
+                {roomData?.roomId || localRoomId || 'ASPR'}
               </div>
             </div>
 
@@ -218,22 +241,20 @@ export default function TvDisplay({ socketHook }) {
             </div>
 
             {/* Direct URL info & Quick PC Test Button */}
-            {roomData?.remoteUrl && (
-              <div className="mt-4 flex flex-col items-center gap-2">
-                <div className="text-xs text-slate-500">
-                  Ou acesse pelo navegador: <span className="text-slate-300 font-mono select-all">{roomData.remoteUrl}</span>
-                </div>
-                <a
-                  href={`/?room=${roomData.roomId}&role=remote`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold glass-button text-blue-300 hover:text-white border-blue-500/30 shadow-specular transition-all cursor-pointer"
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Abrir Controle em Nova Aba (Simular Celular)</span>
-                </a>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <div className="text-xs text-slate-500">
+                Ou acesse pelo navegador: <span className="text-slate-300 font-mono select-all">{roomData?.remoteUrl || `${window.location.origin}/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}</span>
               </div>
-            )}
+              <a
+                href={roomData?.remoteUrl || `/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold glass-button text-blue-300 hover:text-white border-blue-500/30 shadow-specular transition-all cursor-pointer"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                <span>Abrir Controle em Nova Aba (Simular Celular)</span>
+              </a>
+            </div>
           </LiquidGlassCard>
 
           {/* TV Footer Status */}
