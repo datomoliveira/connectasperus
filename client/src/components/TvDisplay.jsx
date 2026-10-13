@@ -217,10 +217,21 @@ export default function TvDisplay({ socketHook }) {
               </div>
             </div>
 
-            {/* Direct URL info */}
+            {/* Direct URL info & Quick PC Test Button */}
             {roomData?.remoteUrl && (
-              <div className="mt-4 text-xs text-slate-500">
-                Ou acesse pelo navegador: <span className="text-slate-300 font-mono select-all">{roomData.remoteUrl}</span>
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="text-xs text-slate-500">
+                  Ou acesse pelo navegador: <span className="text-slate-300 font-mono select-all">{roomData.remoteUrl}</span>
+                </div>
+                <a
+                  href={`/?room=${roomData.roomId}&role=remote`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold glass-button text-blue-300 hover:text-white border-blue-500/30 shadow-specular transition-all cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Abrir Controle em Nova Aba (Simular Celular)</span>
+                </a>
               </div>
             )}
           </LiquidGlassCard>

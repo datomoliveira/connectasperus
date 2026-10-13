@@ -20,9 +20,13 @@ import {
   Smartphone,
   Layers,
   RefreshCw,
-  QrCode
+  QrCode,
+  Cast,
+  Radio
 } from 'lucide-react';
 import LiquidGlassCard from './LiquidGlassCard';
+import { useCast } from '../hooks/useCast';
+import DirectCastModal from './DirectCastModal';
 
 export default function MobileRemote({ 
   socketHook, 
@@ -30,6 +34,8 @@ export default function MobileRemote({
   onOpenScanner, 
   onSwitchMode 
 }) {
+  const castHook = useCast(roomId);
+  const [isDirectCastOpen, setIsDirectCastOpen] = useState(false);
   const { 
     state, 
     updatePlaylist, 
@@ -177,16 +183,32 @@ export default function MobileRemote({
 
         {/* Action icons */}
         <div className="flex items-center gap-2">
+          {/* Cast to TV Button (Option 2: Direct Connection) */}
+          <button
+            onClick={() => setIsDirectCastOpen(true)}
+            className={`p-2.5 rounded-xl glass-button flex items-center gap-1.5 transition-all cursor-pointer ${
+              castHook.isCasting
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-neon-graphite'
+                : 'text-blue-300 border-blue-500/30 hover:text-white'
+            }`}
+            title="Transmitir Direto para TV (Sem Navegador)"
+          >
+            <Cast className={`w-4 h-4 ${castHook.isCasting ? 'text-emerald-400 animate-pulse' : 'text-blue-400'}`} />
+            <span className="text-xs font-semibold">
+              {castHook.isCasting ? 'Transmitindo' : 'Cast TV'}
+            </span>
+          </button>
+
           <button
             onClick={onOpenScanner}
-            className="p-2.5 rounded-xl glass-button text-slate-300 hover:text-white"
+            className="p-2.5 rounded-xl glass-button text-slate-300 hover:text-white cursor-pointer"
             title="Escanear outra sala"
           >
             <QrCode className="w-4 h-4" />
           </button>
           <button
             onClick={onSwitchMode}
-            className="p-2.5 rounded-xl glass-button text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-semibold"
+            className="p-2.5 rounded-xl glass-button text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
             title="Abrir Modo TV"
           >
             <Tv className="w-4 h-4 text-purple-400" />
@@ -196,7 +218,36 @@ export default function MobileRemote({
       </header>
 
       {/* MAIN CONTAINER */}
-      <main className="flex-1 px-4 py-5 max-w-lg mx-auto w-full flex flex-col gap-5 relative z-10">
+      <main className="flex-1 px-4 py-5 max-w-lg mx-auto w-full flex flex-col gap-4 relative z-10">
+        
+        {/* DIRECT CAST QUICK BANNER */}
+        <div 
+          onClick={() => setIsDirectCastOpen(true)}
+          className={`
+            p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all border
+            ${castHook.isCasting 
+              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200' 
+              : 'glass-panel-subtle border-white/10 text-slate-300 hover:border-blue-500/40'}
+          `}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl glass-button ${castHook.isCasting ? 'text-emerald-400' : 'text-blue-400'}`}>
+              <Cast className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                {castHook.isCasting ? `Transmitindo: ${castHook.deviceName || 'TV Sem Fio'}` : 'Conexão Direta Sem Navegador'}
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Opção 2</span>
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {castHook.isCasting ? 'Toque para gerenciar conexão' : 'Toque para conectar via Chromecast, AirPlay ou Smart View'}
+              </span>
+            </div>
+          </div>
+          <button className="px-2.5 py-1 rounded-xl text-[11px] font-bold glass-button text-blue-300 shrink-0">
+            {castHook.isCasting ? 'Gerenciar' : 'Conectar'}
+          </button>
+        </div>
         
         {/* CURRENT SLIDE PREVIEW HERO CARD */}
         <LiquidGlassCard className="p-4 flex flex-col gap-4 border-white/15">
@@ -523,6 +574,15 @@ export default function MobileRemote({
           </div>
         </LiquidGlassCard>
       </main>
+
+      {/* DIRECT WIRELESS CAST MODAL */}
+      <DirectCastModal
+        isOpen={isDirectCastOpen}
+        onClose={() => setIsDirectCastOpen(false)}
+        castHook={castHook}
+        roomId={roomId}
+        onOpenQrMode={onOpenScanner}
+      />
     </div>
   );
 }
