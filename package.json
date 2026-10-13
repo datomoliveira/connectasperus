@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Sistema PWA de transmissão e controle de fotos e vídeos para TV com Liquid Glass UI",
   "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build && rm -rf dist && cp -r client/dist dist",
     "install:all": "npm install --prefix server && npm install --prefix client",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "build:client": "npm run build --prefix client",
-    "start": "npm start --prefix server"
+    "start": "node server/server.js"
   }
 }

@@ -19,11 +19,11 @@ export function useSocket() {
 
   useEffect(() => {
     // In dev mode with Vite on port 5173, backend is on port 3001
-    // In production, backend serves on same port
+    // In cloud / production, support VITE_BACKEND_URL or fallback to window.location.origin
     const isViteDev = window.location.port === '5173';
-    const serverUrl = isViteDev 
+    const serverUrl = import.meta.env.VITE_BACKEND_URL || (isViteDev 
       ? `${window.location.protocol}//${window.location.hostname}:3001`
-      : window.location.origin;
+      : window.location.origin);
 
     const socket = io(serverUrl, {
       transports: ['websocket', 'polling'],

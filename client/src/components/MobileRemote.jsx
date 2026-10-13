@@ -68,9 +68,10 @@ export default function MobileRemote({
     try {
       // Connect to upload API
       const isViteDev = window.location.port === '5173';
-      const apiUrl = isViteDev 
-        ? `${window.location.protocol}//${window.location.hostname}:3001/api/upload`
-        : '/api/upload';
+      const baseUrl = import.meta.env.VITE_BACKEND_URL || (isViteDev 
+        ? `${window.location.protocol}//${window.location.hostname}:3001`
+        : '');
+      const apiUrl = `${baseUrl}/api/upload`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
