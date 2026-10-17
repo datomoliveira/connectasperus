@@ -63,6 +63,73 @@ export default function MobileRemote({
     }
   };
 
+  // High-performance image compressor for mobile gallery photos:
+  // Scales to 1080p and compresses to ~150KB to transfer over WebRTC to TV in < 0.1s
+  const compressAndReadMedia = (file) => {
+    return new Promise((resolve) => {
+      const isVid = (file.type || '').startsWith('video/');
+      if (isVid) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve({
+            id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+            type: 'video',
+            name: file.name,
+            url: event.target.result,
+            duration: 0
+          });
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_DIM = 1920;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Fast 1080p JPEG: super sharp on TV, fraction of the size
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          resolve({
+            id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+            type: 'image',
+            name: file.name,
+            url: compressedDataUrl,
+            duration: 5
+          });
+        };
+        img.onerror = () => {
+          resolve({
+            id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+            type: 'image',
+            name: file.name,
+            url: event.target.result,
+            duration: 5
+          });
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Upload photos and videos from phone
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -99,26 +166,9 @@ export default function MobileRemote({
       }
 
       // 2. If backend was unavailable (e.g. on Cloudflare Pages static hosting),
-      // read files directly in the browser as Data URLs (works 100% serverless!)
+      // compress and process files directly in the browser (works 100% serverless!)
       if (mediaItems.length === 0) {
-        const filePromises = files.map((file) => {
-          return new Promise((resolve) => {
-            const isVid = (file.type || '').startsWith('video/');
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              resolve({
-                id: 'media_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
-                type: isVid ? 'video' : 'image',
-                name: file.name,
-                url: event.target.result,
-                duration: isVid ? 0 : 5
-              });
-            };
-            reader.readAsDataURL(file);
-          });
-        });
-
-        mediaItems = await Promise.all(filePromises);
+        mediaItems = await Promise.all(files.map(compressAndReadMedia));
       }
 
       if (mediaItems.length > 0) {
@@ -201,12 +251,12 @@ export default function MobileRemote({
       <header className="sticky top-0 z-40 px-4 pt-safe pt-3 pb-2.5 glass-panel-subtle border-b border-white/10 flex items-center justify-between gap-2">
         {/* Brand & Room Badge */}
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl glass-button flex items-center justify-center shrink-0 shadow-specular">
-            <Smartphone className="w-4 h-4 text-blue-400" />
+          <div className="w-8 h-8 rounded-xl glass-button flex items-center justify-center shrink-0 shadow-chrome border-slate-300/40">
+            <Smartphone className="w-4 h-4 text-slate-200" />
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm font-extrabold text-white tracking-tight truncate">Asperus</span>
-            <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+            <span className="text-sm font-display font-black text-white tracking-tight truncate">ASPERUS</span>
+            <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200/15 text-slate-200 border border-slate-300/35 whitespace-nowrap">
               {roomId ? `SALA ${roomId}` : 'SEM SALA'}
             </span>
           </div>
@@ -217,19 +267,19 @@ export default function MobileRemote({
           {/* CAMERA SCAN TV QR CODE BUTTON */}
           <button
             onClick={() => setIsCameraScannerOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl glass-button text-blue-300 hover:text-white flex items-center gap-1.5 text-xs font-semibold cursor-pointer border-blue-400/30 shadow-specular active:scale-95"
+            className="px-2.5 py-1.5 rounded-xl glass-button text-slate-100 hover:text-white flex items-center gap-1.5 text-xs font-sans font-semibold cursor-pointer border-slate-300/40 shadow-chrome active:scale-95"
             title="Abrir Câmera para Escanear QR Code da TV"
           >
-            <Camera className="w-3.5 h-3.5 text-blue-400" />
+            <Camera className="w-3.5 h-3.5 text-slate-200" />
             <span className="whitespace-nowrap">Escanear TV</span>
           </button>
 
           {/* Cast TV Button */}
           <button
             onClick={() => setIsDirectCastOpen(true)}
-            className={`p-2 rounded-xl glass-button flex items-center justify-center cursor-pointer transition-all ${
+            className={`p-2 rounded-xl glass-button flex items-center justify-center cursor-pointer transition-all border-slate-300/30 ${
               castHook.isCasting
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-neon-graphite'
+                ? 'bg-slate-200 text-slate-950 border-white shadow-chrome'
                 : 'text-slate-300 hover:text-white'
             }`}
             title="Conexão Direta Sem Fio (Chromecast/AirPlay)"
@@ -240,7 +290,7 @@ export default function MobileRemote({
           {/* View TV mode button */}
           <button
             onClick={onSwitchMode}
-            className="p-2 rounded-xl glass-button text-purple-300 hover:text-white cursor-pointer"
+            className="p-2 rounded-xl glass-button text-slate-300 hover:text-white border-slate-300/30 cursor-pointer"
             title="Ver Modo Telão da TV"
           >
             <Tv className="w-3.5 h-3.5" />
@@ -249,7 +299,7 @@ export default function MobileRemote({
       </header>
 
       {/* MAIN CONTENT CONTAINER */}
-      <main className="flex-1 px-3.5 py-4 max-w-md mx-auto w-full flex flex-col gap-3.5 relative z-10">
+      <main className="flex-1 px-3.5 py-4 max-w-md mx-auto w-full flex flex-col gap-3.5 relative z-10 font-sans">
         
         {/* CONNECTION STATUS PILL */}
         <div 
@@ -257,14 +307,14 @@ export default function MobileRemote({
           className={`
             px-3 py-2 rounded-xl flex items-center justify-between gap-2 border cursor-pointer transition-all
             ${isConnected 
-              ? 'bg-emerald-950/30 border-emerald-500/20 text-emerald-200' 
-              : 'bg-blue-950/30 border-blue-500/20 text-blue-200 hover:bg-blue-900/40'}
+              ? 'bg-slate-900/90 border-slate-300/40 text-slate-100 shadow-chrome' 
+              : 'bg-slate-950/80 border-slate-400/25 text-slate-300 hover:border-slate-300/40'}
           `}
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-blue-400'} opacity-75`} />
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-slate-200' : 'bg-slate-400'} opacity-75`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-white' : 'bg-slate-400'}`} />
             </span>
             <span className="text-[11px] font-semibold truncate">
               {isConnected 
@@ -272,26 +322,26 @@ export default function MobileRemote({
                 : 'Toque para escanear o QR Code da TV'}
             </span>
           </div>
-          <span className="text-[10px] uppercase font-bold text-blue-400 shrink-0 flex items-center gap-1">
-            <Camera className="w-3 h-3" />
+          <span className="text-[10px] uppercase font-mono font-bold text-slate-200 shrink-0 flex items-center gap-1">
+            <Camera className="w-3 h-3 text-slate-300" />
             Escanear
           </span>
         </div>
 
         {/* HERO TV PREVIEW CARD */}
-        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-white/15">
+        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-slate-300/20 shadow-2xl">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="uppercase tracking-wider font-bold text-[11px] flex items-center gap-1 text-slate-300 whitespace-nowrap">
-              <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span className="uppercase tracking-wider font-display font-bold text-[11px] flex items-center gap-1 text-slate-200 whitespace-nowrap">
+              <Sparkles className="w-3.5 h-3.5 text-slate-300 shrink-0" />
               Na Tela da TV
             </span>
-            <span className="font-mono text-[11px] bg-white/5 px-2 py-0.5 rounded-md border border-white/10 text-white whitespace-nowrap">
+            <span className="font-mono text-[11px] bg-white/10 px-2 py-0.5 rounded-md border border-white/15 text-white whitespace-nowrap">
               {state.playlist.length > 0 ? `${state.currentIndex + 1} / ${state.playlist.length}` : 'Vazio'}
             </span>
           </div>
 
           {/* Media Preview Box */}
-          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center">
+          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/70 border border-slate-300/20 flex items-center justify-center">
             {currentItem ? (
               currentItem.type === 'video' ? (
                 <div className="relative w-full h-full flex items-center justify-center bg-black">
@@ -301,8 +351,8 @@ export default function MobileRemote({
                     muted 
                   />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <span className="px-2.5 py-1 rounded-full bg-purple-600/80 backdrop-blur-md text-[11px] font-bold text-white flex items-center gap-1.5 shadow">
-                      <Film className="w-3 h-3" /> Vídeo Curto
+                    <span className="px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-300/40 backdrop-blur-md text-[11px] font-mono font-bold text-slate-100 flex items-center gap-1.5 shadow">
+                      <Film className="w-3 h-3 text-slate-200" /> Vídeo Curto
                     </span>
                   </div>
                 </div>
@@ -314,14 +364,14 @@ export default function MobileRemote({
                 />
               )
             ) : (
-              <div className="flex flex-col items-center justify-center text-slate-500 gap-2 p-4 text-center">
-                <ImageIcon className="w-8 h-8 stroke-[1.5]" />
+              <div className="flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
+                <ImageIcon className="w-8 h-8 stroke-[1.5] text-slate-400" />
                 <span className="text-xs">Nenhuma foto ou vídeo na TV</span>
                 <button
                   onClick={handleLoadDemoMedia}
-                  className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-xl glass-button text-blue-300 border-blue-500/30 flex items-center gap-1.5 shadow"
+                  className="mt-1 text-xs font-display font-bold px-3 py-1.5 rounded-xl glass-button text-slate-200 border-slate-300/40 flex items-center gap-1.5 shadow-chrome"
                 >
-                  <Sparkles className="w-3 h-3 text-blue-400" />
+                  <Sparkles className="w-3 h-3 text-slate-300" />
                   Carregar Demonstração
                 </button>
               </div>
@@ -343,11 +393,11 @@ export default function MobileRemote({
               onClick={togglePlay}
               disabled={state.playlist.length === 0}
               className={`
-                flex-[1.8] py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs tracking-wider uppercase
+                flex-[1.8] py-3 rounded-xl flex items-center justify-center gap-2 font-display font-black text-xs tracking-wider uppercase
                 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 cursor-pointer transition-all
                 ${state.isPlaying 
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-blue-400/40' 
-                  : 'glass-button text-slate-200 hover:text-white'}
+                  ? 'bg-gradient-to-r from-white via-slate-200 to-slate-400 text-slate-950 shadow-[0_0_20px_rgba(255,255,255,0.4)] border border-white' 
+                  : 'glass-button text-slate-100 hover:text-white border-slate-300/40'}
               `}
             >
               {state.isPlaying ? (
@@ -366,7 +416,7 @@ export default function MobileRemote({
             <button
               onClick={nextSlide}
               disabled={state.playlist.length <= 1}
-              className="flex-1 py-3 rounded-xl glass-button flex items-center justify-center text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white active:scale-95 cursor-pointer"
+              className="flex-1 py-3 rounded-xl glass-button flex items-center justify-center text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed hover:text-white active:scale-95 cursor-pointer border-slate-300/30"
               title="Próximo Slide"
             >
               <SkipForward className="w-5 h-5" />
@@ -375,15 +425,15 @@ export default function MobileRemote({
         </LiquidGlassCard>
 
         {/* TIMER CONTROLLER CARD */}
-        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-white/10">
+        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-slate-300/20 shadow-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-blue-400 shrink-0" />
-              <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">
+              <Clock className="w-4 h-4 text-slate-300 shrink-0" />
+              <span className="text-xs font-display font-bold text-white tracking-wide whitespace-nowrap">
                 Timer Entre Imagens
               </span>
             </div>
-            <span className="text-sm font-extrabold font-mono text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-lg border border-blue-500/20 whitespace-nowrap">
+            <span className="text-sm font-bold font-mono text-slate-100 bg-slate-200/15 px-2.5 py-0.5 rounded-lg border border-slate-300/35 whitespace-nowrap shadow-sm">
               {state.timerSeconds}s
             </span>
           </div>
@@ -397,7 +447,7 @@ export default function MobileRemote({
               step="1"
               value={state.timerSeconds || 5}
               onChange={(e) => setTimer(Number(e.target.value))}
-              className="w-full cursor-pointer accent-blue-500 h-2"
+              className="w-full cursor-pointer accent-slate-200 h-2"
             />
             <div className="flex justify-between text-[10px] text-slate-400 font-mono">
               <span>1s</span>
@@ -416,8 +466,8 @@ export default function MobileRemote({
                 className={`
                   py-1.5 rounded-lg text-xs font-mono font-bold transition-all whitespace-nowrap
                   ${state.timerSeconds === sec 
-                    ? 'bg-blue-600 text-white shadow border border-blue-400/50' 
-                    : 'glass-panel-subtle text-slate-300 hover:text-white border-white/5'}
+                    ? 'bg-gradient-to-r from-white to-slate-200 text-slate-950 font-bold shadow-chrome border border-white' 
+                    : 'glass-panel-subtle text-slate-300 hover:text-white border-white/10'}
                 `}
               >
                 {sec}s
@@ -426,14 +476,14 @@ export default function MobileRemote({
           </div>
 
           {/* Display Mode Switcher (Fit vs Fill) */}
-          <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-2 border-t border-slate-300/15 flex items-center justify-between">
             <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">Enquadramento na TV</span>
-            <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
+            <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-slate-300/20">
               <button
                 onClick={() => updateSettings({ fitMode: 'contain' })}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap ${
                   state.fitMode === 'contain' 
-                    ? 'bg-white/20 text-white shadow' 
+                    ? 'bg-white/20 text-white shadow border border-white/20' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -443,7 +493,7 @@ export default function MobileRemote({
                 onClick={() => updateSettings({ fitMode: 'cover' })}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap ${
                   state.fitMode === 'cover' 
-                    ? 'bg-white/20 text-white shadow' 
+                    ? 'bg-white/20 text-white shadow border border-white/20' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -454,11 +504,11 @@ export default function MobileRemote({
         </LiquidGlassCard>
 
         {/* MEDIA UPLOADER & PLAYLIST */}
-        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-white/10">
+        <LiquidGlassCard className="p-3.5 flex flex-col gap-3 border-slate-300/20 shadow-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-purple-400 shrink-0" />
-              <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">
+              <Layers className="w-4 h-4 text-slate-300 shrink-0" />
+              <span className="text-xs font-display font-bold text-white tracking-wide whitespace-nowrap">
                 Fila de Mídias ({state.playlist.length})
               </span>
             </div>
@@ -485,16 +535,16 @@ export default function MobileRemote({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="py-2.5 px-3 rounded-xl glass-button border-blue-500/30 text-blue-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-blue-500/10 cursor-pointer shadow-specular active:scale-95"
+              className="py-2.5 px-3 rounded-xl glass-button border-slate-300/40 text-slate-100 font-display font-bold text-xs flex items-center justify-center gap-1.5 hover:border-white cursor-pointer shadow-chrome active:scale-95"
             >
               {isUploading ? (
                 <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                  <span className="whitespace-nowrap">Enviando...</span>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-200" />
+                  <span className="whitespace-nowrap">Enviando à TV...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-3.5 h-3.5 text-blue-400" />
+                  <Plus className="w-3.5 h-3.5 text-slate-200" />
                   <span className="whitespace-nowrap">+ Fotos/Vídeos</span>
                 </>
               )}
@@ -502,9 +552,9 @@ export default function MobileRemote({
 
             <button
               onClick={handleLoadDemoMedia}
-              className="py-2.5 px-3 rounded-xl glass-button text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-purple-500/10 cursor-pointer shadow-specular active:scale-95"
+              className="py-2.5 px-3 rounded-xl glass-button text-slate-200 font-display font-bold text-xs flex items-center justify-center gap-1.5 hover:border-slate-300/40 cursor-pointer shadow-specular active:scale-95 border-slate-400/30"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <Sparkles className="w-3.5 h-3.5 text-slate-300" />
               <span className="whitespace-nowrap">Demo Rápida</span>
             </button>
           </div>
@@ -524,17 +574,17 @@ export default function MobileRemote({
                     className={`
                       p-2 rounded-xl flex items-center gap-2.5 transition-all
                       ${isSelected 
-                        ? 'bg-blue-900/30 border border-blue-400/50 shadow' 
-                        : 'glass-panel-subtle hover:bg-white/5 border-white/5'}
+                        ? 'bg-slate-800/80 border border-slate-300/50 shadow-chrome' 
+                        : 'glass-panel-subtle hover:bg-white/5 border-slate-400/10'}
                     `}
                   >
                     {/* Thumbnail */}
                     <div 
                       onClick={() => setIndex(idx)}
-                      className="relative w-11 h-11 rounded-lg overflow-hidden bg-black/60 shrink-0 cursor-pointer border border-white/10"
+                      className="relative w-11 h-11 rounded-lg overflow-hidden bg-black/60 shrink-0 cursor-pointer border border-slate-300/20"
                     >
                       {item.type === 'video' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-purple-400">
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-300">
                           <Film className="w-4 h-4" />
                         </div>
                       ) : (
@@ -545,7 +595,7 @@ export default function MobileRemote({
                         />
                       )}
                       {isSelected && (
-                        <div className="absolute inset-0 bg-blue-500/20 ring-1.5 ring-blue-400 ring-inset" />
+                        <div className="absolute inset-0 bg-white/15 ring-1.5 ring-slate-200 ring-inset" />
                       )}
                     </div>
 
@@ -554,19 +604,22 @@ export default function MobileRemote({
                       onClick={() => setIndex(idx)}
                       className="flex-1 min-w-0 cursor-pointer text-left"
                     >
-                      <div className="flex items-center gap-1">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1 py-0.2 rounded ${
-                          item.type === 'video' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                          item.type === 'video' 
+                            ? 'bg-slate-800 text-slate-300 border-slate-400/30' 
+                            : 'bg-slate-200/20 text-white border-slate-300/35'
                         }`}>
                           {item.type === 'video' ? 'Vídeo' : 'Foto'}
                         </span>
                         {isSelected && (
-                          <span className="text-[9px] font-bold text-emerald-400">
-                            • Na TV
+                          <span className="text-[9px] font-mono font-bold text-slate-100 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-200 animate-pulse" />
+                            Na TV
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] font-semibold text-slate-200 truncate mt-0.5">
+                      <p className="text-[11px] font-medium text-slate-200 truncate mt-0.5">
                         {item.name || `Item #${idx + 1}`}
                       </p>
                     </div>

@@ -9,9 +9,9 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #070709;
+  background-color: #06070a;
   color: #f1f5f9;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Outfit', 'Space Grotesk', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -20,47 +20,50 @@ body {
   touch-action: manipulation;
 }
 
-/* Custom Liquid Glass utilities */
+/* Custom Liquid Silver & Polished Chrome utilities */
 .glass-panel {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(18, 20, 28, 0.75) 50%,
-    rgba(10, 11, 16, 0.85) 100%
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(30, 36, 50, 0.72) 40%,
+    rgba(10, 13, 20, 0.88) 100%
   );
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(226, 232, 240, 0.22);
   box-shadow: 
-    0 16px 40px -10px rgba(0, 0, 0, 0.7),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
+    0 16px 40px -10px rgba(0, 0, 0, 0.8),
+    0 0 20px 0 rgba(203, 213, 225, 0.08),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.5);
 }
 
 .glass-panel-subtle {
   background: linear-gradient(
     140deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(18, 20, 28, 0.6) 100%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(20, 24, 34, 0.65) 100%
   );
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(226, 232, 240, 0.14);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .glass-button {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(35, 38, 52, 0.7) 100%
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(148, 163, 184, 0.15) 35%,
+    rgba(30, 41, 59, 0.75) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(226, 232, 240, 0.32);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 
-    0 6px 20px -4px rgba(0, 0, 0, 0.6),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+    0 6px 20px -4px rgba(0, 0, 0, 0.7),
+    0 0 12px rgba(226, 232, 240, 0.1),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -68,9 +71,35 @@ body {
   transform: scale(0.96);
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(20, 22, 30, 0.8) 100%
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(15, 23, 42, 0.85) 100%
   );
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Metallic Chrome text gradient */
+.metallic-text {
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f1f5f9 20%,
+    #94a3b8 50%,
+    #e2e8f0 75%,
+    #ffffff 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.metallic-chrome-pill {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(148, 163, 184, 0.12) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border: 1px solid rgba(226, 232, 240, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .glass-specular-sheen {

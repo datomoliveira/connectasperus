@@ -111,23 +111,92 @@ export function useSocket() {
     return res;
   };
 
+  const incomingChunksRef = useRef(new Map());
+
+  // Helper to safely send any payload (small or large) across WebRTC DataChannel
+  const sendP2PData = useCallback((conn, payload) => {
+    if (!conn || !conn.open) return false;
+    try {
+      const raw = JSON.stringify(payload);
+      const CHUNK_SIZE = 48 * 1024; // 48KB safe chunk size
+      if (raw.length <= CHUNK_SIZE) {
+        conn.send({ __p2pType: 'direct', payload });
+        return true;
+      }
+
+      const transferId = 'tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+      const totalChunks = Math.ceil(raw.length / CHUNK_SIZE);
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = raw.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        conn.send({
+          __p2pType: 'chunk',
+          transferId,
+          index: i,
+          total: totalChunks,
+          chunk
+        });
+      }
+      return true;
+    } catch (err) {
+      console.warn('Erro ao enviar dados P2P:', err);
+      return false;
+    }
+  }, []);
+
+  // Helper to handle incoming P2P data (direct or chunked)
+  const processP2PIncoming = useCallback((rawData, onComplete) => {
+    if (!rawData) return;
+    if (rawData.__p2pType === 'direct') {
+      onComplete(rawData.payload);
+      return;
+    }
+    if (rawData.__p2pType === 'chunk') {
+      const { transferId, index, total, chunk } = rawData;
+      if (!incomingChunksRef.current.has(transferId)) {
+        incomingChunksRef.current.set(transferId, new Array(total));
+      }
+      const arr = incomingChunksRef.current.get(transferId);
+      arr[index] = chunk;
+
+      let completed = true;
+      for (let i = 0; i < total; i++) {
+        if (!arr[i]) {
+          completed = false;
+          break;
+        }
+      }
+
+      if (completed) {
+        const fullString = arr.join('');
+        incomingChunksRef.current.delete(transferId);
+        try {
+          const parsed = JSON.parse(fullString);
+          onComplete(parsed);
+        } catch (e) {
+          console.error('Erro ao reassemblar chunk P2P:', e);
+        }
+      }
+      return;
+    }
+
+    // Direct fallback if sent as raw object without wrapper
+    onComplete(rawData);
+  }, []);
+
   // Broadcast data to all connected P2P remotes (when TV acts as host)
   const broadcastP2P = useCallback((payload) => {
     peerConnsRef.current.forEach((conn) => {
-      if (conn && conn.open) {
-        conn.send(payload);
-      }
+      sendP2PData(conn, payload);
     });
-  }, []);
+  }, [sendP2PData]);
 
   // Send data to TV (when Remote acts as client)
   const sendToHostP2P = useCallback((payload) => {
     if (remoteConnRef.current && remoteConnRef.current.open) {
-      remoteConnRef.current.send(payload);
-      return true;
+      return sendP2PData(remoteConnRef.current, payload);
     }
     return false;
-  }, []);
+  }, [sendP2PData]);
 
   // Setup PeerJS for TV Host (Serverless P2P)
   const setupPeerHost = useCallback(async (roomId) => {
@@ -162,23 +231,19 @@ export function useSocket() {
         setState((prev) => ({ ...prev, remoteCount: peerConnsRef.current.size }));
 
         const sendInitialSync = () => {
-          try {
-            conn.send({
-              type: 'sync-state',
-              state: {
-                playlist: stateRef.current.playlist,
-                currentIndex: stateRef.current.currentIndex,
-                isPlaying: stateRef.current.isPlaying,
-                timerSeconds: stateRef.current.timerSeconds,
-                fitMode: stateRef.current.fitMode,
-                transition: stateRef.current.transition,
-                autoVideoAdvance: stateRef.current.autoVideoAdvance,
-                remoteCount: peerConnsRef.current.size
-              }
-            });
-          } catch (syncErr) {
-            console.warn('Falha no envio de sync inicial:', syncErr);
-          }
+          sendP2PData(conn, {
+            type: 'sync-state',
+            state: {
+              playlist: stateRef.current.playlist,
+              currentIndex: stateRef.current.currentIndex,
+              isPlaying: stateRef.current.isPlaying,
+              timerSeconds: stateRef.current.timerSeconds,
+              fitMode: stateRef.current.fitMode,
+              transition: stateRef.current.transition,
+              autoVideoAdvance: stateRef.current.autoVideoAdvance,
+              remoteCount: peerConnsRef.current.size
+            }
+          });
         };
 
         if (conn.open) {
@@ -187,78 +252,80 @@ export function useSocket() {
           conn.on('open', sendInitialSync);
         }
 
-        conn.on('data', (data) => {
-          if (!data || !data.type) return;
+        conn.on('data', (rawMsg) => {
+          processP2PIncoming(rawMsg, (data) => {
+            if (!data || !data.type) return;
 
-          switch (data.type) {
-            case 'update-playlist':
-              setState((prev) => {
-                const updated = {
-                  ...prev,
-                  playlist: data.playlist,
-                  currentIndex: Math.min(prev.currentIndex, Math.max(0, data.playlist.length - 1))
-                };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+            switch (data.type) {
+              case 'update-playlist':
+                setState((prev) => {
+                  const updated = {
+                    ...prev,
+                    playlist: data.playlist,
+                    currentIndex: Math.min(prev.currentIndex, Math.max(0, data.playlist.length - 1))
+                  };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'set-index':
-              setState((prev) => {
-                const updated = { ...prev, currentIndex: data.index };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'set-index':
+                setState((prev) => {
+                  const updated = { ...prev, currentIndex: data.index };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'next-slide':
-              setState((prev) => {
-                if (prev.playlist.length === 0) return prev;
-                const nextIdx = (prev.currentIndex + 1) % prev.playlist.length;
-                const updated = { ...prev, currentIndex: nextIdx };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'next-slide':
+                setState((prev) => {
+                  if (prev.playlist.length === 0) return prev;
+                  const nextIdx = (prev.currentIndex + 1) % prev.playlist.length;
+                  const updated = { ...prev, currentIndex: nextIdx };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'prev-slide':
-              setState((prev) => {
-                if (prev.playlist.length === 0) return prev;
-                const prevIdx = (prev.currentIndex - 1 + prev.playlist.length) % prev.playlist.length;
-                const updated = { ...prev, currentIndex: prevIdx };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'prev-slide':
+                setState((prev) => {
+                  if (prev.playlist.length === 0) return prev;
+                  const prevIdx = (prev.currentIndex - 1 + prev.playlist.length) % prev.playlist.length;
+                  const updated = { ...prev, currentIndex: prevIdx };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'toggle-play':
-              setState((prev) => {
-                const nextPlay = typeof data.isPlaying === 'boolean' ? data.isPlaying : !prev.isPlaying;
-                const updated = { ...prev, isPlaying: nextPlay };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'toggle-play':
+                setState((prev) => {
+                  const nextPlay = typeof data.isPlaying === 'boolean' ? data.isPlaying : !prev.isPlaying;
+                  const updated = { ...prev, isPlaying: nextPlay };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'set-timer':
-              setState((prev) => {
-                const updated = { ...prev, timerSeconds: data.seconds };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'set-timer':
+                setState((prev) => {
+                  const updated = { ...prev, timerSeconds: data.seconds };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            case 'update-settings':
-              setState((prev) => {
-                const updated = { ...prev, ...data.settings };
-                broadcastP2P({ type: 'sync-state', state: updated });
-                return updated;
-              });
-              break;
+              case 'update-settings':
+                setState((prev) => {
+                  const updated = { ...prev, ...data.settings };
+                  broadcastP2P({ type: 'sync-state', state: updated });
+                  return updated;
+                });
+                break;
 
-            default:
-              break;
-          }
+              default:
+                break;
+            }
+          });
         });
 
         conn.on('close', () => {
@@ -312,10 +379,12 @@ export function useSocket() {
           conn.on('open', handleConnected);
         }
 
-        conn.on('data', (data) => {
-          if (data?.type === 'sync-state' && data.state) {
-            setState((prev) => ({ ...prev, ...data.state }));
-          }
+        conn.on('data', (rawMsg) => {
+          processP2PIncoming(rawMsg, (data) => {
+            if (data?.type === 'sync-state' && data.state) {
+              setState((prev) => ({ ...prev, ...data.state }));
+            }
+          });
         });
 
         conn.on('close', () => {
@@ -334,7 +403,7 @@ export function useSocket() {
     } catch (e) {
       console.warn('PeerClient init failed:', e);
     }
-  }, []);
+  }, [processP2PIncoming]);
 
   // CREATE ROOM: Instantly generates QR code client-side, then syncs with socket & peer
   const createRoom = useCallback(async (customRoomId = null) => {

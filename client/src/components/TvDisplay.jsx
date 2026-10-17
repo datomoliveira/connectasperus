@@ -144,7 +144,36 @@ export default function TvDisplay({ socketHook }) {
   const handleVideoEnded = () => {
     setProgress(100);
     reportVideoFinished();
+    if (nextSlideRef.current) {
+      nextSlideRef.current();
+    }
   };
+
+  // Video Autoplay & Watchdog to guarantee sequence NEVER stalls
+  useEffect(() => {
+    if (!isVideo || !isPlaying) return;
+
+    if (videoRef.current) {
+      videoRef.current.muted = true;
+      videoRef.current.play().catch((err) => {
+        console.warn('Autoplay bloqueado pelo navegador, mutando:', err);
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().catch(() => {});
+        }
+      });
+    }
+
+    // Safety Watchdog: max 30 seconds per video to prevent any freeze
+    const watchdogTimer = setTimeout(() => {
+      console.log('⏰ Watchdog de vídeo: avançando slide travado');
+      if (nextSlideRef.current) {
+        nextSlideRef.current();
+      }
+    }, 30000);
+
+    return () => clearTimeout(watchdogTimer);
+  }, [isVideo, currentIndex, isPlaying]);
 
   // Auto-hide HUD on idle
   useEffect(() => {
@@ -368,11 +397,18 @@ export default function TvDisplay({ socketHook }) {
                 src={currentItem.url}
                 autoPlay
                 playsInline
+                muted
                 className={`w-full h-full ${
                   state.fitMode === 'cover' ? 'object-cover' : 'object-contain'
                 } transition-all duration-700`}
                 onTimeUpdate={handleVideoTimeUpdate}
                 onEnded={handleVideoEnded}
+                onError={(e) => {
+                  console.warn('Erro ao reproduzir vídeo na TV, avançando:', e);
+                  setTimeout(() => {
+                    if (nextSlideRef.current) nextSlideRef.current();
+                  }, 1200);
+                }}
               />
             ) : (
               <img
