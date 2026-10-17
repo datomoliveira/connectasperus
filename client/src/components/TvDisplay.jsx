@@ -56,7 +56,7 @@ export default function TvDisplay({ socketHook }) {
       QRCode.toDataURL(targetUrl, {
         errorCorrectionLevel: 'M',
         margin: 2,
-        width: 400,
+        width: 480,
         color: { dark: '#000000', light: '#ffffff' }
       }).then((url) => {
         setLocalQr(url);
@@ -199,103 +199,161 @@ export default function TvDisplay({ socketHook }) {
       {/* Background Ambient Glow & Mesh */}
       <div className="absolute inset-0 bg-ambient-mesh opacity-90 pointer-events-none" />
 
-      {/* NO MEDIA / PAIRING SCREEN */}
+      {/* NO MEDIA / PAIRING SCREEN (WIDESCREEN 16:9 TV OPTIMIZED) */}
       {state.playlist.length === 0 ? (
-        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-8 text-center">
+        <div className="relative z-10 w-full h-full flex flex-col justify-between p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto overflow-y-auto sm:overflow-hidden">
           
-          {/* Header Brand */}
-          <div className="mb-8 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl glass-button flex items-center justify-center shadow-specular">
-              <Tv className="w-6 h-6 text-slate-200" />
+          {/* Top Header Bar */}
+          <div className="flex items-center justify-between w-full shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl glass-button flex items-center justify-center shadow-specular">
+                <Tv className="w-5 h-5 sm:w-6 sm:h-6 text-slate-200" />
+              </div>
+              <div className="text-left">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                  ASPERUS CAST
+                </h1>
+                <p className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-400 font-semibold">
+                  Transmissão Inteligente para TV
+                </p>
+              </div>
             </div>
-            <div className="text-left">
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                ASPERUS CAST
-              </h1>
-              <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">
-                Transmissão Inteligente para TV
-              </p>
+
+            {/* TV Controls & Live Clock */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/60 border border-white/10 text-xs text-slate-300">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="font-mono">{currentTimeStr}</span>
+              </div>
+              <button
+                onClick={toggleFullscreen}
+                className="px-3.5 py-1.5 rounded-xl glass-button text-xs font-semibold text-slate-300 hover:text-white border-white/10 shadow-specular flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                title="Alternar Tela Cheia (Tecla F)"
+              >
+                {isFullscreen ? <Minimize className="w-4 h-4 text-blue-400" /> : <Maximize className="w-4 h-4 text-blue-400" />}
+                <span className="hidden sm:inline">{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Main Glass Pairing Card */}
-          <LiquidGlassCard className="max-w-xl w-full p-8 md:p-10 flex flex-col items-center border-white/15">
-            <div className="relative mb-6 group">
-              {/* Pulsing ring around QR code */}
-              <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-blue-500/20 via-slate-400/20 to-purple-500/20 blur-xl opacity-75 animate-pulse-slow pointer-events-none" />
-              
-              <div className="relative bg-white p-4 rounded-2xl shadow-2xl border border-white/20">
-                {(roomData?.qrDataUrl || localQr) ? (
-                  <img 
-                    src={roomData?.qrDataUrl || localQr} 
-                    alt="Conectar via QR Code" 
-                    className="w-64 h-64 md:w-72 md:h-72 object-contain" 
-                  />
-                ) : (
-                  <div className="w-64 h-64 md:w-72 md:h-72 flex items-center justify-center text-slate-800">
-                    <span className="animate-spin text-2xl font-bold">●</span>
+          {/* Main Pairing Card: 2 Columns for 16:9 Smart TVs */}
+          <div className="flex-1 flex items-center justify-center my-auto py-2 sm:py-4">
+            <LiquidGlassCard className="w-full max-w-4xl p-5 sm:p-7 md:p-8 border-white/15 shadow-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
+                
+                {/* Left Column: Instructions & Room Code */}
+                <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-4">
+                  <div>
+                    <span className="inline-block px-3 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300 text-[11px] font-semibold tracking-wider uppercase mb-1.5">
+                      Pareamento Rápido
+                    </span>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
+                      Conecte seu Celular
+                    </h2>
+                    <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
+                      Funciona com Android e iPhone direto pela câmera.
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Room Code Callout */}
-            <div className="mb-4 text-center">
-              <span className="text-xs uppercase tracking-widest text-slate-400 font-medium">Código da Sala</span>
-              <div className="text-4xl md:text-5xl font-extrabold tracking-widest bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent mt-1">
-                {roomData?.roomId || localRoomId || 'ASPR'}
-              </div>
-            </div>
+                  {/* Room Code Callout */}
+                  <div className="w-full bg-slate-950/70 border border-white/10 rounded-2xl p-3.5 flex flex-col items-center md:items-start">
+                    <span className="text-[11px] uppercase tracking-widest text-slate-400 font-medium">
+                      Código da Sala
+                    </span>
+                    <div className="text-3xl sm:text-4xl font-extrabold tracking-widest bg-gradient-to-r from-blue-400 via-white to-slate-300 bg-clip-text text-transparent font-mono mt-0.5">
+                      {roomData?.roomId || localRoomId || 'ASPR'}
+                    </div>
+                  </div>
 
-            {/* Step instructions */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-slate-300 mt-2 bg-slate-900/60 py-3 px-5 rounded-2xl border border-white/10 w-full">
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-blue-400 shrink-0" />
-                <span>1. Abra a câmera do celular</span>
-              </div>
-              <span className="hidden sm:inline text-slate-600">•</span>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
-                <span>2. Escaneie para controlar</span>
-              </div>
-            </div>
+                  {/* Step Instructions */}
+                  <div className="space-y-2 w-full text-xs sm:text-sm text-slate-300">
+                    <div className="flex items-center gap-3 bg-slate-900/50 p-2.5 rounded-xl border border-white/5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                        1
+                      </div>
+                      <span>Abra a <strong>câmera</strong> do Android ou iPhone</span>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-900/50 p-2.5 rounded-xl border border-white/5">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs shrink-0">
+                        2
+                      </div>
+                      <span>Aponte para o <strong>QR Code</strong> ao lado</span>
+                    </div>
+                  </div>
 
-            {/* Direct URL info & Quick PC Test Button */}
-            <div className="mt-4 flex flex-col items-center gap-2">
-              <div className="text-xs text-slate-500">
-                Ou acesse pelo navegador: <span className="text-slate-300 font-mono select-all">{roomData?.remoteUrl || `${window.location.origin}/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}</span>
-              </div>
-              <a
-                href={roomData?.remoteUrl || `/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold glass-button text-blue-300 hover:text-white border-blue-500/30 shadow-specular transition-all cursor-pointer"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                <span>Abrir Controle em Nova Aba (Simular Celular)</span>
-              </a>
-            </div>
-          </LiquidGlassCard>
+                  {/* Direct Link Info & Optional Simulator Button */}
+                  <div className="pt-1 text-[11px] text-slate-400 font-mono break-all text-center md:text-left w-full">
+                    <span>Ou acesse: </span>
+                    <span className="text-blue-300 font-semibold select-all">
+                      {roomData?.remoteUrl || `${window.location.origin}/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}
+                    </span>
+                  </div>
 
-          {/* TV Footer Status */}
-          <div className="mt-8 flex items-center gap-6 text-xs text-slate-400">
+                  {/* Optional PC test link (hidden on small viewports) */}
+                  <a
+                    href={roomData?.remoteUrl || `/?room=${roomData?.roomId || localRoomId || 'ASPR'}&role=remote`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold glass-button text-slate-400 hover:text-white border-white/10 shadow-specular transition-all cursor-pointer"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Testar controle no PC</span>
+                  </a>
+                </div>
+
+                {/* Right Column: Perfect Square QR Code */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative group">
+                    {/* Ambient Glow */}
+                    <div className="absolute -inset-3 rounded-3xl bg-gradient-to-r from-blue-500/30 via-slate-400/20 to-purple-500/30 blur-xl opacity-80 animate-pulse-slow pointer-events-none" />
+                    
+                    {/* Pure White Container - Guaranteed High Contrast and Quiet Zone */}
+                    <div className="relative bg-white p-3.5 sm:p-4 rounded-3xl shadow-2xl border-2 border-white/40 flex items-center justify-center">
+                      {(roomData?.qrDataUrl || localQr) ? (
+                        <img 
+                          src={roomData?.qrDataUrl || localQr} 
+                          alt="Conectar via QR Code" 
+                          className="w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 lg:w-64 lg:h-64 object-contain aspect-square rounded-xl block shadow-inner" 
+                        />
+                      ) : (
+                        <div className="w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 flex flex-col items-center justify-center text-slate-800 gap-2">
+                          <span className="animate-spin text-2xl font-bold">●</span>
+                          <span className="text-xs font-semibold text-slate-600">Gerando QR...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-[11px] text-slate-400 flex items-center gap-1.5 font-medium">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>Aponte a câmera a até 3 metros</span>
+                  </div>
+                </div>
+
+              </div>
+            </LiquidGlassCard>
+          </div>
+
+          {/* Bottom Footer Bar */}
+          <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/5 shrink-0">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-              <span>
+              <span className="font-medium text-slate-300">
                 {state.remoteCount > 0 
                   ? `${state.remoteCount} celular(es) conectado(s)` 
-                  : 'Aguardando conexão do celular...'}
+                  : 'Aguardando celular conectar...'}
               </span>
             </div>
-            <span>•</span>
-            <div className="flex items-center gap-1.5 font-mono">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              {currentTimeStr}
+
+            <div className="flex items-center gap-2 text-slate-500 font-mono text-[11px]">
+              <Wifi className="w-3.5 h-3.5 text-slate-400" />
+              <span>{window.location.hostname}</span>
             </div>
           </div>
+
         </div>
       ) : (
         /* ACTIVE SLIDESHOW SCREEN */

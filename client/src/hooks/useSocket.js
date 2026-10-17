@@ -24,6 +24,11 @@ export function useSocket() {
   const remoteConnRef = useRef(null); // On Remote: active connection to TV
   const currentRoomIdRef = useRef('');
   const isHostTvRef = useRef(false);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Initialize Socket.IO connection
   useEffect(() => {
@@ -156,22 +161,31 @@ export function useSocket() {
         setSyncMode('p2p');
         setState((prev) => ({ ...prev, remoteCount: peerConnsRef.current.size }));
 
-        conn.on('open', () => {
-          // Send initial state to the newly connected phone
-          conn.send({
-            type: 'sync-state',
-            state: {
-              playlist: state.playlist,
-              currentIndex: state.currentIndex,
-              isPlaying: state.isPlaying,
-              timerSeconds: state.timerSeconds,
-              fitMode: state.fitMode,
-              transition: state.transition,
-              autoVideoAdvance: state.autoVideoAdvance,
-              remoteCount: peerConnsRef.current.size
-            }
-          });
-        });
+        const sendInitialSync = () => {
+          try {
+            conn.send({
+              type: 'sync-state',
+              state: {
+                playlist: stateRef.current.playlist,
+                currentIndex: stateRef.current.currentIndex,
+                isPlaying: stateRef.current.isPlaying,
+                timerSeconds: stateRef.current.timerSeconds,
+                fitMode: stateRef.current.fitMode,
+                transition: stateRef.current.transition,
+                autoVideoAdvance: stateRef.current.autoVideoAdvance,
+                remoteCount: peerConnsRef.current.size
+              }
+            });
+          } catch (syncErr) {
+            console.warn('Falha no envio de sync inicial:', syncErr);
+          }
+        };
+
+        if (conn.open) {
+          sendInitialSync();
+        } else {
+          conn.on('open', sendInitialSync);
+        }
 
         conn.on('data', (data) => {
           if (!data || !data.type) return;
@@ -286,11 +300,17 @@ export function useSocket() {
         const conn = peer.connect(targetPeerId, { reliable: true });
         remoteConnRef.current = conn;
 
-        conn.on('open', () => {
+        const handleConnected = () => {
           console.log('🎉 P2P Conectado diretamente à TV!');
           setIsConnected(true);
           setSyncMode('p2p');
-        });
+        };
+
+        if (conn.open) {
+          handleConnected();
+        } else {
+          conn.on('open', handleConnected);
+        }
 
         conn.on('data', (data) => {
           if (data?.type === 'sync-state' && data.state) {
@@ -300,7 +320,16 @@ export function useSocket() {
 
         conn.on('close', () => {
           console.log('Conexão P2P encerrada');
+          setIsConnected(false);
         });
+
+        conn.on('error', (err) => {
+          console.warn('Erro na conexão P2P:', err);
+        });
+      });
+
+      peer.on('error', (err) => {
+        console.warn('PeerClient erro:', err);
       });
     } catch (e) {
       console.warn('PeerClient init failed:', e);
@@ -321,7 +350,7 @@ export function useSocket() {
       qrDataUrl = await QRCode.toDataURL(remoteUrl, {
         errorCorrectionLevel: 'M',
         margin: 2,
-        width: 400,
+        width: 480,
         color: { dark: '#000000', light: '#ffffff' }
       });
     } catch (err) {
