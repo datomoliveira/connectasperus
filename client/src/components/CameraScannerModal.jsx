@@ -133,12 +133,8 @@ export default function CameraScannerModal({ isOpen, onClose, onScanned }) {
           {/* Scanner Overlay Guide Target */}
           {isScanning && !errorMessage && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-56 h-56 border-2 border-blue-400/80 rounded-2xl relative shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse">
-                {/* Corner markers */}
-                <span className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-400 -mt-1 -ml-1 rounded-tl" />
-                <span className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-400 -mt-1 -mr-1 rounded-tr" />
-                <span className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-400 -mb-1 -ml-1 rounded-bl" />
-                <span className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-400 -mb-1 -mr-1 rounded-br" />
+              <div className="w-56 h-56 border border-slate-300/60 rounded-2xl relative shadow-[0_0_24px_rgba(255,255,255,0.15)]">
+                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-[1px] bg-slate-300/40 animate-pulse" />
               </div>
             </div>
           )}

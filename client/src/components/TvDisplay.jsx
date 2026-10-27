@@ -239,10 +239,10 @@ export default function TvDisplay({ socketHook }) {
                 <Tv className="w-5 h-5 sm:w-6 sm:h-6 text-slate-200" />
               </div>
               <div className="text-left">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-wider text-white">
                   ASPERUS CAST
                 </h1>
-                <p className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-400 font-semibold">
+                <p className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-400 font-semibold font-mono">
                   Transmissão Inteligente para TV
                 </p>
               </div>
@@ -289,7 +289,7 @@ export default function TvDisplay({ socketHook }) {
                     <span className="text-[11px] uppercase tracking-widest text-slate-400 font-medium">
                       Código da Sala
                     </span>
-                    <div className="text-3xl sm:text-4xl font-extrabold tracking-widest bg-gradient-to-r from-blue-400 via-white to-slate-300 bg-clip-text text-transparent font-mono mt-0.5">
+                    <div className="text-3xl sm:text-4xl font-black tracking-widest text-white font-mono mt-0.5">
                       {roomData?.roomId || localRoomId || 'ASPR'}
                     </div>
                   </div>

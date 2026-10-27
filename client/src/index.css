@@ -20,6 +20,17 @@ body {
   touch-action: manipulation;
 }
 
+/* Impeccable craft floor: Theme browser surfaces (selection, caret, focus rings) */
+::selection {
+  background: rgba(226, 232, 240, 0.25);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(226, 232, 240, 0.6);
+  outline-offset: 2px;
+}
+
 /* Custom Liquid Silver & Polished Chrome utilities */
 .glass-panel {
   background: linear-gradient(
