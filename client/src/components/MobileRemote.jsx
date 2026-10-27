@@ -280,9 +280,9 @@ export default function MobileRemote({
             <button
               onClick={() => togglePlay()}
               disabled={state.playlist.length === 0}
-              className={`flex-[1.8] py-3 rounded-xl flex items-center justify-center gap-2 font-display font-black text-xs tracking-wider uppercase disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 cursor-pointer transition-all ${
+              className={`flex-[1.8] py-3.5 rounded-xl flex items-center justify-center gap-2 font-display font-black text-xs tracking-wider uppercase disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 cursor-pointer transition-all ${
                 state.isPlaying
-                  ? 'bg-gradient-to-r from-white via-slate-200 to-slate-400 text-slate-950 shadow-[0_0_20px_rgba(255,255,255,0.4)] border border-white'
+                  ? 'bg-white text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.45)] border border-white'
                   : 'glass-button text-slate-100 hover:text-white border-slate-300/40'
               }`}
             >
@@ -323,9 +323,9 @@ export default function MobileRemote({
               <button
                 key={sec}
                 onClick={() => setTimer(sec)}
-                className={`py-2 rounded-xl text-xs font-mono font-bold transition-all whitespace-nowrap ${
+                className={`py-2 rounded-xl text-xs font-mono font-bold transition-all whitespace-nowrap active:scale-95 ${
                   state.timerSeconds === sec
-                    ? 'bg-gradient-to-r from-white to-slate-200 text-slate-950 shadow-chrome border border-white'
+                    ? 'bg-white text-slate-950 shadow-chrome border border-white'
                     : 'glass-panel-subtle text-slate-300 hover:text-white border-white/10'
                 }`}
               >
