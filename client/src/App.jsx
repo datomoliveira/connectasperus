@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSocket } from './hooks/useSocket';
 import TvDisplay from './components/TvDisplay';
 import MobileRemote from './components/MobileRemote';
-import QrScannerModal from './components/QrScannerModal';
+import CameraScannerModal from './components/CameraScannerModal';
 import { Tv, Smartphone, Sparkles, RefreshCw } from 'lucide-react';
 import LiquidGlassCard from './components/LiquidGlassCard';
 
@@ -32,9 +32,9 @@ export default function App() {
     } else if (roleParam === 'tv') {
       setMode('tv');
     } else {
-      // Auto detect based on screen width / user agent
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-      setMode(isMobile ? 'remote' : 'tv');
+      // Default to TV when opening clean URL (connectasperus.pages.dev)
+      // This guarantees the TV display with QR Code is ALWAYS shown first unless on a remote URL!
+      setMode('tv');
     }
   }, [joinRoom]);
 
@@ -93,11 +93,11 @@ export default function App() {
         />
       )}
 
-      {/* MODAL: PAIR / JOIN ROOM */}
-      <QrScannerModal
+      {/* MODAL: CAMERA SCANNER PARA QR CODE DA TV */}
+      <CameraScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
-        onJoinRoom={handleJoinSpecificRoom}
+        onScanned={handleJoinSpecificRoom}
       />
     </div>
   );
